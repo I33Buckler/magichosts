@@ -70,7 +70,7 @@ If you have multiple WiFi networks on your router, but they all follow the same 
 need to include the part they have in common. For example, if you have `MyGreatNet_2G` and `MyGreatNet_5G`,
 just set `NETWORK` to `"MyGreatNet"`.
 
-3. Run the script for the first time, and then verify that `/etc/hosts/` is correct based on your network.
+4. Run the script for the first time, and then verify that `/etc/hosts/` is correct based on your network.
 The script MUST be run with `sudo`.
 
 ```bash
@@ -80,12 +80,58 @@ $ cat /etc/hosts
 
 Ensure the output of `/etc/hosts` is correct, given your internet connection.
 
-4. Add the script to your *root* cron, via `sudo crontab -e`. Make sure you give the full path to the script.
+5. Enable the script according to your preferred scheduler
+- ### cron<br>
+  Add the script to your *root* cron, via `sudo crontab -e`. Make sure you give the full path to the script.
+  ```cron
+  * * * * * /usr/local/bin/magichosts
+  ```
+  The script will run every minute (unless you modify the line).
+  
+- ### systemd<br>
+    1. Change directory to /etc/systemd/system
+    - Create the file `magichosts.service` with the following
+    ```
+    [Unit]
+    Description=Script to swith /etc/hosts when connected to LAN at home
+    
+    [Service]
+    Type=oneshot
+    ExecStart=/usr/local/bin/magichosts
+    ```
+    - Create the file `magichosts.timer` with the following to run the contents of `magichosts.service` every minute.
+    ```
+    [Unit]
+    Description=Check for wireless connection every minute
+    
+    [Timer]
+    OnCalendar=*-*-* *:*:00
+    Persistent=Ttrue
+    
+    [Install] 
+    WantedBy=timers.target
+    ```
+    Confirm the details of the scheduling parameters. This will show the next 5 scheduled instances according to the parameters for OnCalendar.
+    ```
+    systemd-analyze calendar --iterations=5 '*-*-* *:*:00'
+    ```
+    Information on systemd timers can be found at https://wiki.archlinux.org/title/Systemd/Timers
+  
+    2. Enable the systemd timer with the following
+       
+      1. Reload systemd
 
-```cron
-* * * * * /usr/local/bin/magichosts
-```
-The script will run every minute (unless you modify the line).
+sudo systemctl daemon-reload
+
+ii) Enable the timer to run on boot
+
+sudo systemctl enable magichosts
+
+iii) Start the timer immediately
+
+sudo systemctl start magichosts
+
+    
 
 ## Usage
 
